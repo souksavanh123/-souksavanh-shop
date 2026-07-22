@@ -733,6 +733,22 @@
   function addOrder(order){
     return db.collection('orders').doc(order.id).set(order);
   }
+
+  /* ---- Real push notification via ntfy.sh (works even with owner's app/phone locked) ---- */
+  const NTFY_TOPIC = 'souksavanh-oil-orders-8k2p9x';
+  function sendPushNotification(order){
+    const timingText = order.timing === 'asap' ? 'ທັນທີ' : ((order.schedDate||'') + ' ' + (order.schedTime||''));
+    fetch('https://ntfy.sh/' + NTFY_TOPIC, {
+      method: 'POST',
+      headers: {
+        'Title': '🔔 ອໍເດີໃໝ່ ' + order.id,
+        'Priority': 'urgent',
+        'Tags': 'fuelpump'
+      },
+      body: '👤 ' + order.name + ' (' + order.phone + ')\n⛽ ' + order.fuel + ' × ' + order.liters + ' ລິດ\n📏 ' + order.distanceKm + ' ກມ · 🕐 ' + timingText + '\n💰 ' + order.total.toLocaleString() + ' ກີບ'
+    }).catch(function(err){ console.error('ntfy push failed:', err); });
+  }
+
   function updateOrderStatus(orderId, newStatus){
     db.collection('orders').doc(orderId).update({ status:newStatus })
       .then(function(){ showToast('✅ ອັບເດດສະຖານະ ' + orderId + ' ແລ້ວ'); })
@@ -1163,6 +1179,7 @@
     const original = btn.textContent;
     btn.disabled = true; btn.textContent = '⏳ ກຳລັງສົ່ງອໍເດີ...';
     addOrder(order).then(function(){
+      sendPushNotification(order);
       btn.disabled = false; btn.textContent = original;
       document.getElementById('orderIdShow').textContent = orderId;
       document.getElementById('finalAmount').textContent = total.toLocaleString() + ' ກີບ';
